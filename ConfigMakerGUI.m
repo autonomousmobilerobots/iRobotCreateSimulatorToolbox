@@ -141,7 +141,7 @@ if ~isempty(fileName)
 
         % Write configuration data to file
         fid= fopen(fileName,'wt');
-        sensors= {'wall' 'cliff' 'odometry' 'sonar' 'lidar' 'camera'};
+        sensors= {'wall' 'cliff' 'odometry' 'sonar' 'lidar' 'camera', 'rsdepth'};
         % Sensors are in order as in the table
         fprintf(fid,'%% SensorName NoiseMean NoiseStandardDev\n');
         for i= 1:size(noise,1)

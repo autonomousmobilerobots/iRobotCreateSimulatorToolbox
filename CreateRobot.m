@@ -24,6 +24,9 @@ classdef CreateRobot < handle
         angRangeCamera = pi*60/180; % Angular range of camera (each side)
         cameraDisplace = 0.13;  % Position of camera along robot's x-axis      
         frictionKin= 0.35;    %  Coefficient of kinetic friction of robot and wall
+        angRangeRSDepth = 54*pi/180   % Ang range for FOV of real sense depth sensor (rad)
+        rangeRSDepth = 10       % Max depth of real sense (m)
+        rangeMinRSDepth = 0.175 % Min depth of real sense (m)
     end
     
     properties(GetAccess= 'private', SetAccess= 'private')
@@ -168,8 +171,8 @@ classdef CreateRobot < handle
         end
         
     % SimulatorGUI Control Functions
-        function [rad rIR rSon rLid angRLid numPtsLid]= getConstants(obj)
-        % [rad rIR rSon rLid angRLid numPtsLid] = getConstants(obj)
+        function [rad rIR rSon rLid angRLid numPtsLid rRSDepth angRSDepth]= getConstants(obj)
+        % [rad rIR rSon rLid angRLid numPtsLid rRSDepth angRSDepth] = getConstants(obj)
         % Output constant properties of the robot for simulator usage
         %
         % Input:
@@ -181,6 +184,8 @@ classdef CreateRobot < handle
         % rLid - Double, linear range of LIDAR sensor (m)
         % angRLid - Double, angular range of LIDAR sensor (rad)
         % numPtsLid - Double, number of points used by LIDAR sensor
+        % rRSDepth - Double, range of Real Sense Depth sensor (m)
+        % angRSDepth - Double, angular range of Real Sense Depth (rad)
             
             rad= obj.radius;
             rIR= obj.rangeIR;
@@ -188,6 +193,8 @@ classdef CreateRobot < handle
             rLid= obj.rangeLidar;
             angRLid= obj.angRangeLidar;
             numPtsLid= obj.numPtsLidar;
+            rRSDepth= obj.rangeRSDepth;
+            angRSDepth= obj.angRangeRSDepth;
         end
         
         function [start walls lines beacs vwalls]= getMap(obj)
@@ -513,7 +520,66 @@ classdef CreateRobot < handle
                         [y_sensor y_sensor+dist*sin(th_sensor)])
                 end
             end
+            
+            % RealSenseDepth sensor
+            if get(handlesGUI.chkbx_rsdepth,'Value')
+                x_sensor= obj.posAbs(1)+obj.radius*cos(obj.thAbs);
+                y_sensor= obj.posAbs(2)+obj.radius*sin(obj.thAbs);
+                
+                iStart = 17; % idx to start counting in the handles
+                
+                % Get noise parameters
+                if isfield(obj.noise,'rsdepth')
+                    noiseAvg= obj.noise.rsdepth(1);
+                    noiseStDev= obj.noise.rsdepth(2);
+                else
+                    noiseAvg= 0;
+                    noiseStDev= 0;
+                end
+                                
+                % Sensor lines in RSDepth range
+                % Transforms for between sensor frame and global
+                th = obj.thAbs;
+                R_r_g = [cos(th) -sin(th);
+                        sin(th) cos(th)].';
+                o_wrt_r = -R_r_g*[x_sensor;y_sensor];
+                num_points = 3;
+                % Global axes in robot frame
+                T_r_g = [R_r_g o_wrt_r;
+                        0 0 1];
+                % robot coordinates in global frame
+                T_g_r = [cos(th) -sin(th) x_sensor;
+                        sin(th) cos(th) y_sensor;
+                        0 0 1];
+                
+                for i= 1:num_points
+                    % Angle of measurement from the front of sensor
+                    th_offset = -(i-1)*obj.angRangeRSDepth/(num_points-1)+...
+                    obj.angRangeRSDepth/2;
+                
+                    % Find orientation of line of sight in absolute frame
+                    th_sensor= obj.thAbs + th_offset;
+                    
+                    dist= findDist(obj,x_sensor,y_sensor,obj.rangeRSDepth,...
+                        th_sensor)+noiseAvg+noiseStDev*randn;
+                    x_meas = x_sensor + dist * cos(th_sensor);
+                    y_meas = y_sensor + dist * sin(th_sensor);
+                    
+                    % Find position of virtual sensor point
+                    
+                    xyR = T_r_g*[x_meas; y_meas; 1];
+                    xy_virt = T_g_r*[0; xyR(2); 1];
+                    
+                    % Update gui
+                    set(handles_sensors(iStart+i),'XData',...
+                        [xy_virt(1) x_meas])
+                    set(handles_sensors(iStart+i),'YData',...
+                        [xy_virt(2) y_meas])
+                end
+            end
         end
+        
+        
         
         function startTimeElap(obj)
         % startTimeElap(obj)
@@ -978,6 +1044,68 @@ classdef CreateRobot < handle
                 % Set any readings below minimum to the minimum
                 distLidar(i)= max(distLidar(i),obj.rangeMinLidar);
             end
+        end
+        
+        function distRSDepth= genRSDepth(obj, num_points, height)
+        % distRSDepth = genRSDepth(obj, num_points, height)
+        % Generates a reading for the RealSense Depth sensor
+        %
+        % Input:
+        % obj - Instance of class CreateRobot
+        % num_points - how many points to sample
+        % height - height at which the scan should be taken (doesn't matter
+        %           for simulator)
+        %
+        % Output:
+        % distRSDepth - Array of doubles, of length num_points with the
+        %   first value corresponding to the left-most reading and the
+        %   last corresponding to the right-most reading on the LIDAR, the
+        %   readings will be the depth to the nearest obstacle, 0 if it is
+        %   too close, or the max range if it is too far. Measurements
+        %   correspond to evenly spaced angles between -angRangeRSDepth/2
+        %   and +angRangeRSDepth/2
+            
+            % Calculate position of sensor (same for all angles)
+            x_sensor= obj.posAbs(1)+obj.radius*cos(obj.thAbs);
+            y_sensor= obj.posAbs(2)+obj.radius*sin(obj.thAbs);
+            
+            % Get noise parameters
+            if isfield(obj.noise,'rsDepth')
+                noiseAvg= obj.noise.rsdepth(1);
+                noiseStDev= obj.noise.rsdepth(2);
+            else
+                noiseAvg= 0;
+                noiseStDev= 0;
+            end
+            
+            % Cycle through all points of sensing
+            distRSDepth = obj.rangeRSDepth*ones(1,num_points);
+            for i= 1:num_points
+                % Find orientation of measurment in robot frame
+                th_offset = -(i-1)*obj.angRangeRSDepth/(num_points-1)+...
+                    obj.angRangeRSDepth/2;
+                
+                % Find orientation of line of sight in absolute frame
+                th_sensor= obj.thAbs + th_offset;
+                    
+                
+                % Get noise value to change reading of LIDAR
+                noiseVal= noiseAvg+noiseStDev*randn;
+                
+                % Solve for distance using general function
+                distRSDepth(i)= findDist(obj,x_sensor,y_sensor,...
+                    obj.rangeRSDepth,th_sensor)+noiseVal;
+                
+                % Correct for real sense output and only give the distance
+                % between the plane of the sensor and the object
+                distRSDepth(i) = distRSDepth(i) * cos(th_offset);
+                
+            end
+            % Set any readings below minimum to zero
+            distRSDepth(distRSDepth < obj.rangeMinRSDepth) = 0;
+            
+            % Caps the distance at the maximum
+            distRSDepth(distRSDepth > obj.rangeRSDepth) = obj.rangeRSDepth;
         end
         
         function [ang dist color id]= genCamera(obj)
@@ -2026,8 +2154,8 @@ classdef CreateRobot < handle
             end
         end
         
-        function [BumpRight BumpLeft WheDropRight WheDropLeft ...
-                WheDropCaster BumpFront] = BumpsWheelDropsSensorsRoomba(obj)
+        function [BumpRight, BumpLeft, WheDropRight, WheDropLeft, ...
+                WheDropCaster, BumpFront] = BumpsWheelDropsSensorsRoomba(obj)
         %[BumpRight BumpLeft WheDropRight WheDropLeft WheDropCaster 
         %   BumpFront] = BumpsWheelDropsSensorsRoomba(obj)
         % Reads status of bump and wheel drop sensors
@@ -2092,7 +2220,7 @@ classdef CreateRobot < handle
             end
         end
         
-        function [ButtonAdv ButtonPlay]= ButtonsSensorRoomba(obj)
+        function [ButtonAdv, ButtonPlay]= ButtonsSensorRoomba(obj)
         % [ButtonAdv ButtonPlay] = ButtonsSensorRoomba(obj)
         % Reads state of the buttons
         % Note that the buttons are toggle buttons in the simulator, unlike
@@ -3556,6 +3684,129 @@ classdef CreateRobot < handle
                             ' = ReadBeacon'],X(1),Y(1),Z(1),ROT(1),Ntag(1));
                     end
                     addFcnToOutput(obj,fcn_called)
+                    
+                catch me
+                    if ~strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')
+                        disp('Simulator:unknownError')
+                        disp('Error in function ReadBeacon.')
+                    end
+                    rethrow(me)
+                end
+            end
+        end
+        
+        function depth_array= RealSenseDist(obj, num_points, height)
+        % depth_array= RealSenseDist(obj, num_points, height)
+        % Reads the depth from the Real Sense Depth Sensor for a given 
+        % number of points at a height
+        %
+        % Input:
+        % obj - Instance of class CreateRobot
+        % num_points - how many points to sample
+        % height - height at which the scan should be taken (doesn't matter
+        %           for simulator)
+        %
+        % Output:
+        % depth_array - Array of doubles, of length num_points with the
+        %   first value corresponding to the left-most reading and the
+        %   last corresponding to the right-most reading on the LIDAR, the
+        %   readings will be the depth to the nearest obstacle, 0 if it is
+        %   too close, or the max range if it is too far
+            
+        
+            assert((num_points >= 2) && (num_points <= 9),...
+                'num_points must be between 2 and 9, inclusive')
+            assert((height >= 1) && (height <= 40),...
+                'height must be between 1 and 40, inclusive')
+            % Check for valid input
+            if ~isa(obj,'CreateRobot')
+                error('Simulator:invalidInput',...
+                    ['Input to RealSenseDist must have class '...
+                    'CreateRobot.  Input argument should be the input '...
+                    'argument to the control program'])
+            else
+                try
+                    % Check that autonomous is enabled and quit if not
+                    autoCheck(obj)
+                    
+                    % Pause for communication delay
+                    pause(obj.comDelay)
+                    
+                    % Generate reading for sensor
+                    depth_array= genRSDepth(obj, num_points, height);
+                    
+                    % Add the translator function call to output data
+                    fcn_called= sprintf(['[%.3f %.3f %.3f %.3f %.3f]= '...
+                        'RealSenseDist'],depth_array(1),...
+                        depth_array(ceil(num_points/4)),...
+                        depth_array(ceil(num_points/2)),...
+                        depth_array(ceil(3*num_points/4)),...
+                        depth_array(end));
+                    addFcnToOutput(obj,fcn_called)
+                    
+                catch me
+                    if ~strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')
+                        disp('Simulator:unknownError')
+                        disp('Error in function RealSenseDist.')
+                    end
+                    rethrow(me)
+                end
+            end
+        end
+        
+        function tags = RealSenseTag(obj)
+        % tags = RealSenseTag(obj)
+        % Reads the AprilTag detection camera and reports ...
+        %
+        % These comments are not up to date (akp84 01/2019)
+        % Camera coordinate frame is defined as (updated May 2014):
+        % x - axis points to right
+        % y - axis points down
+        % z - axis points out of camera (depth)
+        %
+        % Input:
+        % obj - Instance of the class CreateRobot
+        % 
+        % Output: 
+        % X   - column vector of x coordinates in camera coordinates
+        % y   - column vector of y coordinates in camera coordinates
+        % z   - column vector of z coordinates in camera coordinates
+        % rot - column vector of rotation of tag around its center point
+        % Ntag- column vector of AR tag numbers detected in camera frame
+        
+         % Check for valid input
+            if ~isa(obj,'CreateRobot')
+                error('Simulator:invalidInput',...
+                    ['Input to RealSenseTag must have class '...
+                    'CreateRobot.  Input argument should be the input '...
+                    'argument to the control program'])
+            else
+                try
+                    % Check that autonomous is enabled and quit if not
+                    autoCheck(obj)
+                    
+                    % Pause for communication delay
+                    pause(obj.comDelay)
+                    
+                    % Generate reading for sensor
+                    [angle, dist, color, Ntag]= genCamera(obj);
+
+                    X = -dist.*sin(angle);      % Minus, because x-axis right
+                    Y = zeros(numel(angle),1);  % Assume tags are in same plane as the camera
+                    Z = +dist.*cos(angle);
+                    ROT = Y;                    % Assume tags are oriented upright 
+                    
+                    % Add the translator function call to output data
+                    if isempty(angle)   % No beacons detected
+                        fcn_called= '[]= RealSenseTag';
+                    else                % Only output first beacon found
+                        fcn_called= sprintf(['[%.3f %.3f %.3f %.3f %.3f]'...
+                            ' = RealSenseTag'],X(1),Y(1),Z(1),ROT(1),Ntag(1));
+                    end
+                    addFcnToOutput(obj,fcn_called)
+                    
+                    % Make output in realsense format
+                    tags = [Ntag X Z ROT];
                     
                 catch me
                     if ~strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')

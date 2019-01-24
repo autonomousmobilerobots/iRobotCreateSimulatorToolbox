@@ -57,14 +57,14 @@ obj= CreateRobot(handles);
 set(handles.text_title,'UserData',obj)
 
 % Get constant properties for use in plotting
-[rad rIR rSon rLid angRLid numPtsLid]= getConstants(obj);
+[rad, rIR, rSon, rLid, angRLid, ~, rRSDepth, angRSDepth]= getConstants(obj);
 
 % Plot robot in default position and store plot handles for updating
 axes(handles.axes_map)
 circ_numPts= 21;    % Estimate circle as circ_numPts-1 lines
 circ_ang=linspace(0,2*pi,circ_numPts);
 circ_rad=ones(1,circ_numPts)*rad;
-[circ_x circ_y]= pol2cart(circ_ang,circ_rad);
+[circ_x, circ_y]= pol2cart(circ_ang,circ_rad);
 handle_circ= plot(circ_x,circ_y,'b-','LineWidth',1.5);
 handle_line= plot([0 1.5*rad],[0 0],'b-','LineWidth',1.5);
 set(handles.figure_simulator,'UserData',[handle_circ ; handle_line])
@@ -93,11 +93,17 @@ handle_lidarFL= plot([rad rLid*cos(angRLid/4)],...
     [0 rLid*sin(angRLid/4)],'Color',[1 0.8 0],'LineWidth',2);
 handle_lidarL= plot([rad rLid*cos(angRLid/2)],...
     [0 rLid*sin(angRLid/2)],'Color',[1 0.8 0],'LineWidth',2);
+handle_rsDepthL= plot([rad rRSDepth*cos(angRSDepth/2)],...
+    [0 rRSDepth*sin(angRSDepth/2)],'Color',[0.25 0 0.5],'LineWidth',2);
+handle_rsDepthF= plot([rad rRSDepth*cos(0)],...
+    [0 rRSDepth*sin(0)],'Color',[0.25 0 0.5],'LineWidth',2);
+handle_rsDepthR= plot([rad rRSDepth*cos(-angRSDepth/2)],...
+    [0 rRSDepth*sin(-angRSDepth/2)],'Color',[0.25 0 0.5],'LineWidth',2);
 handles_sensors= [handle_wallIR handle_sonarF handle_sonarL ...
     handle_sonarB handle_sonarR handle_bumpR handle_bumpF handle_bumpL ...
     handle_cliffR handle_cliffFR handle_cliffFL handle_cliffL ...
     handle_lidarR handle_lidarFR handle_lidarF handle_lidarFL ...
-    handle_lidarL]';
+    handle_lidarL handle_rsDepthL handle_rsDepthF handle_rsDepthR]';
 set(handles_sensors,'Visible','off')
 set(handles.axes_map,'UserData',handles_sensors)
 
@@ -340,7 +346,7 @@ if filename                         % Make sure cancel was not pressed
         end
         
         % Get information from line
-        sensors= {'wall' 'cliff' 'odometry' 'sonar' 'lidar' 'camera' 'imu'};
+        sensors= {'wall' 'cliff' 'odometry' 'sonar' 'lidar' 'camera' 'imu' 'rsdepth'};
         if length(lineWords) == 2 && strcmp(lineWords{1},'com_delay')
             setComDelay(obj,str2double(lineWords{2}))
         elseif length(lineWords) == 3 && any(strcmp(lineWords{1},sensors))
@@ -459,6 +465,20 @@ else
     set(handles_sensors(13:17),'Visible','off')
 end
 
+function chkbx_rsdepth_Callback(hObject, eventdata, handles)
+% hObject    handle to chkbx_lidar (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of chkbx_lidar
+
+% Toggle visibility of sensor visualization with the checkbox
+handles_sensors= get(handles.axes_map,'UserData');
+if get(handles.chkbx_rsdepth,'Value')
+    set(handles_sensors(18:20),'Visible','on')
+else
+    set(handles_sensors(18:20),'Visible','off')
+end
 
 % --- Executes on button press in push_sensors.
 function push_sensors_Callback(hObject, eventdata, handles)
@@ -468,7 +488,7 @@ function push_sensors_Callback(hObject, eventdata, handles)
 
 % Get robot object to query sensors and output to command window
 obj= get(handles.text_title,'UserData');
-[rad rIR rSon rLid angRLid numPtsLid]= getConstants(obj);
+[rad rIR rSon rLid angRLid numPtsLid rRSDepth angRSDepth]= getConstants(obj);
 
 % Bump sensors
 bump= genBump(obj);
