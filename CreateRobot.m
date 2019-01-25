@@ -1079,7 +1079,7 @@ classdef CreateRobot < handle
             end
             
             % Cycle through all points of sensing
-            distRSDepth = obj.rangeRSDepth*ones(1,num_points);
+            distRSDepth = obj.rangeRSDepth*ones(num_points,1);
             for i= 1:num_points
                 % Find orientation of measurment in robot frame
                 th_offset = -(i-1)*obj.angRangeRSDepth/(num_points-1)+...
@@ -1106,6 +1106,7 @@ classdef CreateRobot < handle
             
             % Caps the distance at the maximum
             distRSDepth(distRSDepth > obj.rangeRSDepth) = obj.rangeRSDepth;
+            
         end
         
         function [ang dist color id]= genCamera(obj)
@@ -3702,14 +3703,17 @@ classdef CreateRobot < handle
         %
         % Input:
         % obj - Instance of class CreateRobot
-        % num_points - how many points to sample
-        % height - height at which the scan should be taken (doesn't matter
-        %           for simulator)
+        % num_points - how many points to sample. must be >= 2 and <10, is 
+        %   the number of points to return from the camera, taken in 
+        %   regular intervals horizontally across the depth image. 
+        % height - is the integer angle in degrees from the bottom of the
+        %   depth image, must be in range [1, 40] inclusive. Doesn't matter
+        %   for the simulator
         %
         % Output:
         % depth_array - Array of doubles, of length num_points with the
         %   first value corresponding to the left-most reading and the
-        %   last corresponding to the right-most reading on the LIDAR, the
+        %   last corresponding to the right-most reading of the depth, the
         %   readings will be the depth to the nearest obstacle, 0 if it is
         %   too close, or the max range if it is too far
             
@@ -3755,25 +3759,23 @@ classdef CreateRobot < handle
         end
         
         function tags = RealSenseTag(obj)
-        % tags = RealSenseTag(obj)
-        % Reads the AprilTag detection camera and reports ...
+        % tags = RealSenseTag(obj) Finds AprilTags in the image from the
+        % camera. Returns the id of the AprilTag, position in the frame of the
+        % camera, and rotation about its center.
         %
-        % These comments are not up to date (akp84 01/2019)
-        % Camera coordinate frame is defined as (updated May 2014):
-        % x - axis points to right
-        % y - axis points down
-        % z - axis points out of camera (depth)
+        %   Camera coordinate frame is defined as:
+        %       x - axis points to right
+        %       y - axis points down
+        %       z - axis points out of camera (depth)
         %
-        % Input:
-        % obj - Instance of the class CreateRobot
-        % 
-        % Output: 
-        % X   - column vector of x coordinates in camera coordinates
-        % y   - column vector of y coordinates in camera coordinates
-        % z   - column vector of z coordinates in camera coordinates
-        % rot - column vector of rotation of tag around its center point
-        % Ntag- column vector of AR tag numbers detected in camera frame
-        
+        %   Each row of the array is [id z x rot]
+        %   
+        %   id = The id number of the AprilTag
+        %   z = The z-distance of the AprilTag in the camera coordinate frame
+        %   x = The x-distance of the AprilTag in the camera coordinate frame
+        %   rot = The orientation of the tag, in radians
+        %
+        %   If no tags are detected, returns an empty array
          % Check for valid input
             if ~isa(obj,'CreateRobot')
                 error('Simulator:invalidInput',...
@@ -3806,7 +3808,7 @@ classdef CreateRobot < handle
                     addFcnToOutput(obj,fcn_called)
                     
                     % Make output in realsense format
-                    tags = [Ntag X Z ROT];
+                    tags = [Ntag Z X ROT];
                     
                 catch me
                     if ~strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')
