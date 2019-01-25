@@ -3811,7 +3811,7 @@ classdef CreateRobot < handle
                 catch me
                     if ~strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')
                         disp('Simulator:unknownError')
-                        disp('Error in function ReadBeacon.')
+                        disp('Error in function RealSenseTag.')
                     end
                     rethrow(me)
                 end
