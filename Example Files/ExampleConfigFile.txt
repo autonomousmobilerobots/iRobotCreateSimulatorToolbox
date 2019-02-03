@@ -11,5 +11,6 @@ odometry -0.02000 0.06000
 sonar 0.00000 0.00400
 lidar 0.00000 0.00100
 camera 0.00000 0.02000
+rsdepth 1.00000 0.50000
 
-com_delay 0.1
+com_delay .12
