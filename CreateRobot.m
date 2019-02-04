@@ -1070,7 +1070,7 @@ classdef CreateRobot < handle
             y_sensor= obj.posAbs(2)+obj.radius*sin(obj.thAbs);
             
             % Get noise parameters
-            if isfield(obj.noise,'rsDepth')
+            if isfield(obj.noise,'rsdepth')
                 noiseAvg= obj.noise.rsdepth(1);
                 noiseStDev= obj.noise.rsdepth(2);
             else
