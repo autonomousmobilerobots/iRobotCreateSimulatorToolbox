@@ -57,7 +57,7 @@ obj= CreateRobot(handles);
 set(handles.text_title,'UserData',obj)
 
 % Get constant properties for use in plotting
-[rad, rIR, rSon, rLid, angRLid, ~, rRSDepth, angRSDepth]= getConstants(obj);
+[rad, rIR, rSon, rLid, angRLid, ~, rRSDepth, angRSDepth, nRSDepth]= getConstants(obj);
 
 % Plot robot in default position and store plot handles for updating
 axes(handles.axes_map)
@@ -93,17 +93,17 @@ handle_lidarFL= plot([rad rLid*cos(angRLid/4)],...
     [0 rLid*sin(angRLid/4)],'Color',[1 0.8 0],'LineWidth',2);
 handle_lidarL= plot([rad rLid*cos(angRLid/2)],...
     [0 rLid*sin(angRLid/2)],'Color',[1 0.8 0],'LineWidth',2);
-handle_rsDepthL= plot([rad rRSDepth*cos(angRSDepth/2)],...
-    [0 rRSDepth*sin(angRSDepth/2)],'Color',[0.25 0 0.5],'LineWidth',2);
-handle_rsDepthF= plot([rad rRSDepth*cos(0)],...
-    [0 rRSDepth*sin(0)],'Color',[0.25 0 0.5],'LineWidth',2);
-handle_rsDepthR= plot([rad rRSDepth*cos(-angRSDepth/2)],...
-    [0 rRSDepth*sin(-angRSDepth/2)],'Color',[0.25 0 0.5],'LineWidth',2);
+handle_rsdepth = gobjects(nRSDepth,1);
+for ii = [1:nRSDepth]
+    ang = angRSDepth/2 + (ii-1)*(angRSDepth/(nRSDepth-1));
+    handle_rsdepth(ii)= plot([rad rRSDepth*cos(ang)],...
+        [0 rRSDepth*sin(ang)],'Color',[0.25 0 0.5],'LineWidth',2);
+end
 handles_sensors= [handle_wallIR handle_sonarF handle_sonarL ...
     handle_sonarB handle_sonarR handle_bumpR handle_bumpF handle_bumpL ...
     handle_cliffR handle_cliffFR handle_cliffFL handle_cliffL ...
     handle_lidarR handle_lidarFR handle_lidarF handle_lidarFL ...
-    handle_lidarL handle_rsDepthL handle_rsDepthF handle_rsDepthR]';
+    handle_lidarL handle_rsdepth(:)']';
 set(handles_sensors,'Visible','off')
 set(handles.axes_map,'UserData',handles_sensors)
 
@@ -475,9 +475,9 @@ function chkbx_rsdepth_Callback(hObject, eventdata, handles)
 % Toggle visibility of sensor visualization with the checkbox
 handles_sensors= get(handles.axes_map,'UserData');
 if get(handles.chkbx_rsdepth,'Value')
-    set(handles_sensors(18:20),'Visible','on')
+    set(handles_sensors(18:26),'Visible','on')
 else
-    set(handles_sensors(18:20),'Visible','off')
+    set(handles_sensors(18:26),'Visible','off')
 end
 
 % --- Executes on button press in push_sensors.
@@ -488,7 +488,7 @@ function push_sensors_Callback(hObject, eventdata, handles)
 
 % Get robot object to query sensors and output to command window
 obj= get(handles.text_title,'UserData');
-[rad rIR rSon rLid angRLid numPtsLid rRSDepth angRSDepth]= getConstants(obj);
+[rad rIR rSon rLid angRLid numPtsLid rRSDepth angRSDepth nRSDepth]= getConstants(obj);
 
 % Bump sensors
 bump= genBump(obj);
