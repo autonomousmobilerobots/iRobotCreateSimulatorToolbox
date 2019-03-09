@@ -580,6 +580,15 @@ for i= 1:length(angCameraBeacon)
 end
 fprintf('\n')
 
+% RS Depth
+rsDepth= genRSDepth(obj);
+anglesRSDepth = linspace(angRSDepth/2,-angRSDepth/2,nRSDepth);
+for ii = 1:nRSDepth
+    fprintf('Depth from sensor at %.3f deg: %.3f m\n',rad2deg(anglesRSDepth(ii)),rsDepth(ii));
+end
+
+fprintf('\n')
+
 
 % --- Executes on button press in push_fwd.
 function push_fwd_Callback(hObject, eventdata, handles)

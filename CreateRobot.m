@@ -15,7 +15,7 @@ classdef CreateRobot < handle
         wheelbase = 0.258       % Distance between wheels of iRobot Create
         rangeIR= 0.1;           % Linear range of the infrared sensor
         rangeSonar= 3;          % Linear range of all sonar sensors
-        rangeMinSonar= 0.02;    % Minimum linear range of sonar sensor
+        rangeMinSonar= 0.17;    % Minimum linear range of sonar sensor 0.02
         rangeLidar= 4;          % Linear range of LIDAR sensor
         rangeMinLidar= 0.02;    % Minimum linear range of LIDAR sensor
         angRangeLidar= pi*240/180;      % Angular range of LIDAR sensor
@@ -188,6 +188,7 @@ classdef CreateRobot < handle
         % numPtsLid - Double, number of points used by LIDAR sensor
         % rRSDepth - Double, range of Real Sense Depth sensor (m)
         % angRSDepth - Double, angular range of Real Sense Depth (rad)
+        % nRSDepth - Double, number of points returned by Real Sense Depth
             
             rad= obj.radius;
             rIR= obj.rangeIR;
@@ -554,19 +555,28 @@ classdef CreateRobot < handle
                 T_g_r = [cos(th) -sin(th) x_sensor;
                         sin(th) cos(th) y_sensor;
                         0 0 1];
+                    
+                % Finds the current depth
+                cur_depth = genRSDepth(obj);
                 
-                for i= 1:num_points
+                for ii= 1:num_points
                     % Angle of measurement from the front of sensor
-                    th_offset = -(i-1)*obj.angRangeRSDepth/(num_points-1)+...
+                    th_offset = -(ii-1)*obj.angRangeRSDepth/(num_points-1)+...
                     obj.angRangeRSDepth/2;
                 
-                    % Find orientation of line of sight in absolute frame
-                    th_sensor= obj.thAbs + th_offset;
+%                     % Find orientation of line of sight in absolute frame
+%                     th_sensor= obj.thAbs + th_offset;
+%                     
+%                     dist= findDist(obj,x_sensor,y_sensor,obj.rangeRSDepth,...
+%                         th_sensor)+noiseAvg+noiseStDev*randn;
+%                     x_meas = x_sensor + dist * cos(th_sensor);
+%                     y_meas = y_sensor + dist * sin(th_sensor);
                     
-                    dist= findDist(obj,x_sensor,y_sensor,obj.rangeRSDepth,...
-                        th_sensor)+noiseAvg+noiseStDev*randn;
-                    x_meas = x_sensor + dist * cos(th_sensor);
-                    y_meas = y_sensor + dist * sin(th_sensor);
+                    x_sensorframe = cur_depth(ii);
+                    y_sensorframe = cur_depth(ii) * tan(th_offset);
+                    
+                    x_meas = x_sensor + x_sensorframe;
+                    y_meas = y_sensor + y_sensorframe;
                     
                     % Find position of virtual sensor point
                     
@@ -574,9 +584,9 @@ classdef CreateRobot < handle
                     xy_virt = T_g_r*[0; xyR(2); 1];
                     
                     % Update gui
-                    set(handles_sensors(iStart+i),'XData',...
+                    set(handles_sensors(iStart+ii),'XData',...
                         [xy_virt(1) x_meas])
-                    set(handles_sensors(iStart+i),'YData',...
+                    set(handles_sensors(iStart+ii),'YData',...
                         [xy_virt(2) y_meas])
                 end
             end
@@ -1005,50 +1015,6 @@ classdef CreateRobot < handle
             end
         end
         
-        function distLidar= genLidar(obj)
-        % distLidar = genLidar(obj)
-        % Generates a reading for the LIDAR sensor
-        %
-        % Input:
-        % obj - Instance of class CreateRobot
-        %
-        % Output:
-        % distLidar - Vector of doubles of length obj.numPtsLidar
-        %   Distances correspond to angles [-angRangeLidar/2 angRangeLidar/2]
-        %   Remember that angles are defined positive counter-clockwise
-            
-            % Calculate position of sensor (same for all angles)
-            x_sensor= obj.posAbs(1)+obj.radius*cos(obj.thAbs);
-            y_sensor= obj.posAbs(2)+obj.radius*sin(obj.thAbs);
-            
-            % Get noise parameters
-            if isfield(obj.noise,'lidar')
-                noiseAvg= obj.noise.lidar(1);
-                noiseStDev= obj.noise.lidar(2);
-            else
-                noiseAvg= 0;
-                noiseStDev= 0;
-            end
-            
-            % Cycle through all points of sensing
-            distLidar= obj.rangeLidar*ones(1,obj.numPtsLidar);
-            for i= 1:obj.numPtsLidar
-                % Find orientation of line of sight
-                th_sensor= obj.thAbs+(i-1)*obj.angRangeLidar/...
-                    (obj.numPtsLidar-1)-obj.angRangeLidar/2;
-                
-                % Get noise value to change reading of LIDAR
-                noiseVal= noiseAvg+noiseStDev*randn;
-                
-                % Solve for distance using general function
-                distLidar(i)= findDist(obj,x_sensor,y_sensor,...
-                    obj.rangeLidar,th_sensor)+noiseVal;
-                
-                % Set any readings below minimum to the minimum
-                distLidar(i)= max(distLidar(i),obj.rangeMinLidar);
-            end
-        end
-        
         function rsDepth= genRSDepth(obj)
         % rsDepth = genRSDepth(obj)
         % Generates a reading for the RealSense Depth sensor
@@ -1094,18 +1060,32 @@ classdef CreateRobot < handle
                 % Find orientation of line of sight in absolute frame
                 th_sensor= obj.thAbs + th_offset;
                     
-                
-                % Get noise value to change reading of LIDAR
-                noiseVal= noiseAvg+noiseStDev*randn;
-                
                 % Solve for distance using general function
                 distRSDepth(i)= findDist(obj,x_sensor,y_sensor,...
-                    obj.rangeRSDepth,th_sensor)+noiseVal;
+                    obj.rangeRSDepth,th_sensor);
                 
                 % Correct for real sense output and only give the distance
                 % between the plane of the sensor and the object
                 distRSDepth(i) = distRSDepth(i) * cos(th_offset);
                 
+                % Get noise value to change reading of RSDepth
+                noiseVal= noiseAvg+noiseStDev*randn;
+                
+                if (distRSDepth(i)<obj.rangeRSDepth)&&(distRSDepth(i)>obj.rangeMinRSDepth)
+                   % Compute bounds on the sensor noise such that noise 
+                   % cannot cause sensor saturation in either direction
+                   % (max or min).  
+                   % NOTE: This results in noise that is not purely Gaussian
+                   
+                   % Finds the minimum range value of the sensor
+                   maxNoiseVal = obj.rangeRSDepth - distRSDepth(i);
+                   minNoiseVal = obj.rangeMinRSDepth - distRSDepth(i);
+                   
+                   % Saturate noisy depth measurement between these values
+                   noiseVal = min(max(noiseVal,minNoiseVal),maxNoiseVal);
+                   
+                   distRSDepth(i) = distRSDepth(i)+noiseVal;
+                end
             end
             % Set any readings below minimum to zero
             distRSDepth(distRSDepth < obj.rangeMinRSDepth) = 0;
@@ -1113,9 +1093,61 @@ classdef CreateRobot < handle
             % Caps the distance at the maximum
             distRSDepth(distRSDepth > obj.rangeRSDepth) = obj.rangeRSDepth;
             
+            % See if robot is intersecting a wall
+            center2wall = findDist(obj,obj.posAbs(1),obj.posAbs(2),...
+                    obj.radius,0);
+            if center2wall < obj.radius
+                distRSDepth = zeros(size(distRSDepth));
+            end
             rsDepth = distRSDepth;
             
         end
+        
+        function distLidar= genLidar(obj)
+        % distLidar = genLidar(obj)
+        % Generates a reading for the LIDAR sensor
+        %
+        % Input:
+        % obj - Instance of class CreateRobot
+        %
+        % Output:
+        % distLidar - Vector of doubles of length obj.numPtsLidar
+        %   Distances correspond to angles [-angRangeLidar/2 angRangeLidar/2]
+        %   Remember that angles are defined positive counter-clockwise
+            
+            % Calculate position of sensor (same for all angles)
+            x_sensor= obj.posAbs(1)+obj.radius*cos(obj.thAbs);
+            y_sensor= obj.posAbs(2)+obj.radius*sin(obj.thAbs);
+            
+            % Get noise parameters
+            if isfield(obj.noise,'lidar')
+                noiseAvg= obj.noise.lidar(1);
+                noiseStDev= obj.noise.lidar(2);
+            else
+                noiseAvg= 0;
+                noiseStDev= 0;
+            end
+            
+            % Cycle through all points of sensing
+            distLidar= obj.rangeLidar*ones(1,obj.numPtsLidar);
+            for i= 1:obj.numPtsLidar
+                % Find orientation of line of sight
+                th_sensor= obj.thAbs+(i-1)*obj.angRangeLidar/...
+                    (obj.numPtsLidar-1)-obj.angRangeLidar/2;
+                
+                % Get noise value to change reading of LIDAR
+                noiseVal= noiseAvg+noiseStDev*randn;
+                
+                % Solve for distance using general function
+                distLidar(i)= findDist(obj,x_sensor,y_sensor,...
+                    obj.rangeLidar,th_sensor)+noiseVal;
+                
+                % Set any readings below minimum to the minimum
+                distLidar(i)= max(distLidar(i),obj.rangeMinLidar);
+            end
+        end
+        
+
         
         function [ang dist color id]= genCamera(obj)
         % [ang dist color id] = genCamera(obj)
