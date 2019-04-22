@@ -23,10 +23,10 @@ classdef CreateRobot < handle
         rangeCamera = 6;        % Linear range of the camera for blob detection
         angRangeCamera = pi*60/180; % Angular range of camera (each side)
         cameraDisplaceX = 0.13;  % Position of camera along robot's x-axis 
-        cameraDisplaceY = 0.07;  % Position of camera along robot's y-axis
+        cameraDisplaceY = 0.0;  % Position of camera along robot's y-axis
         frictionKin= 0.35;    %  Coefficient of kinetic friction of robot and wall
         angRangeRSDepth = 54*pi/180   % Ang range for FOV of real sense depth sensor (rad)
-        rangeRSDepth = 10       % Max depth of real sense (m)
+        rangeRSDepth = 30       % Max depth of real sense (m)
         rangeMinRSDepth = 0.175 % Min depth of real sense (m)
         rsdepth_n_pts = 9;      % Number of depth points to sample
     end
@@ -525,6 +525,7 @@ classdef CreateRobot < handle
                 end
             end
             
+            
             % RealSenseDepth sensor
             if get(handlesGUI.chkbx_rsdepth,'Value')
                 x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs);
@@ -555,28 +556,19 @@ classdef CreateRobot < handle
                 T_g_r = [cos(th) -sin(th) x_sensor;
                         sin(th) cos(th) y_sensor;
                         0 0 1];
-                    
-                % Finds the current depth
-                cur_depth = genRSDepth(obj);
                 
-                for ii= 1:num_points
+                for i= 1:num_points
                     % Angle of measurement from the front of sensor
-                    th_offset = -(ii-1)*obj.angRangeRSDepth/(num_points-1)+...
+                    th_offset = -(i-1)*obj.angRangeRSDepth/(num_points-1)+...
                     obj.angRangeRSDepth/2;
                 
-%                     % Find orientation of line of sight in absolute frame
-%                     th_sensor= obj.thAbs + th_offset;
-%                     
-%                     dist= findDist(obj,x_sensor,y_sensor,obj.rangeRSDepth,...
-%                         th_sensor)+noiseAvg+noiseStDev*randn;
-%                     x_meas = x_sensor + dist * cos(th_sensor);
-%                     y_meas = y_sensor + dist * sin(th_sensor);
+                    % Find orientation of line of sight in absolute frame
+                    th_sensor= obj.thAbs + th_offset;
                     
-                    x_sensorframe = cur_depth(ii);
-                    y_sensorframe = cur_depth(ii) * tan(th_offset);
-                    
-                    x_meas = x_sensor + x_sensorframe;
-                    y_meas = y_sensor + y_sensorframe;
+                    dist= findDist(obj,x_sensor,y_sensor,obj.rangeRSDepth,...
+                        th_sensor)+noiseAvg+noiseStDev*randn;
+                    x_meas = x_sensor + dist * cos(th_sensor);
+                    y_meas = y_sensor + dist * sin(th_sensor);
                     
                     % Find position of virtual sensor point
                     
@@ -584,12 +576,20 @@ classdef CreateRobot < handle
                     xy_virt = T_g_r*[0; xyR(2); 1];
                     
                     % Update gui
-                    set(handles_sensors(iStart+ii),'XData',...
-                        [xy_virt(1) x_meas])
-                    set(handles_sensors(iStart+ii),'YData',...
-                        [xy_virt(2) y_meas])
+                    if dist < .175 || findDist(obj,obj.posAbs(1),obj.posAbs(2),0.13,th_sensor) < 0.13
+                        set(handles_sensors(iStart+i),'XData',...
+                            [0 0])
+                        set(handles_sensors(iStart+i),'YData',...
+                            [0 0])
+                    else
+                       set(handles_sensors(iStart+i),'XData',...
+                            [xy_virt(1) x_meas])
+                        set(handles_sensors(iStart+i),'YData',...
+                            [xy_virt(2) y_meas])
+                    end
                 end
             end
+            
         end
         
         
@@ -1038,7 +1038,7 @@ classdef CreateRobot < handle
             num_points = obj.rsdepth_n_pts;
             
             % Calculate position of sensor (same for all angles)
-            x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs);
+            x_sensor= obj.posAbs(1)+obj.*cos(obj.thAbs);
             y_sensor= obj.posAbs(2)+obj.cameraDisplaceX*sin(obj.thAbs);
             
             % Get noise parameters
@@ -1095,7 +1095,7 @@ classdef CreateRobot < handle
             
             % See if robot is intersecting a wall
             center2wall = findDist(obj,obj.posAbs(1),obj.posAbs(2),...
-                    obj.radius,0);
+                    obj.radius,obj.thAbs);
             if center2wall < obj.radius
                 distRSDepth = zeros(size(distRSDepth));
             end
@@ -3804,16 +3804,16 @@ classdef CreateRobot < handle
         % camera, and rotation about its center.
         %
         %   Camera coordinate frame is defined as:
-        %       x - axis points to right
-        %       y - axis points down
-        %       z - axis points out of camera (depth)
+        %       x - axis points out of the camera (depth)
+        %       y - axis points left
+        %       z - axis points up
         %
         %   Each row of the array is [dt id z x rot]
         %   
         %   dt = The delay from when the tag was requested
         %   id = The id number of the AprilTag
-        %   z = The z-distance of the AprilTag in the camera coordinate frame
         %   x = The x-distance of the AprilTag in the camera coordinate frame
+        %   y = The y-distance of the AprilTag in the camera coordinate frame
         %   rot = The orientation of the tag, in radians
         %
         %   If no tags are detected, returns an empty array
@@ -3836,10 +3836,10 @@ classdef CreateRobot < handle
                     % Pause for communication delay
                     pause(obj.comDelay)
 
-                    X = -dist.*sin(angle);      % Minus, because x-axis right
-                    Y = zeros(numel(angle),1);  % Assume tags are in same plane as the camera
-                    Z = +dist.*cos(angle);
-                    ROT = Y;                    % Assume tags are oriented upright 
+                    Y = dist.*sin(angle);      
+                    Z = zeros(numel(angle),1);  % Assume tags are in same plane as the camera
+                    X = +dist.*cos(angle);
+                    ROT = Z;                    % Assume tags are oriented upright 
                     
                     % Add the translator function call to output data
                     if isempty(angle)   % No beacons detected
@@ -3853,7 +3853,7 @@ classdef CreateRobot < handle
                     dt = toc(request_time);
                     
                     % Make output in realsense format
-                    tags = [dt*ones(length(Ntag),1) Ntag Z X ROT];
+                    tags = [dt*ones(length(Ntag),1) Ntag X Y ROT];
                     
                 catch me
                     if ~strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')
