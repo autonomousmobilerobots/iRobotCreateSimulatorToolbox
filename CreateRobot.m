@@ -26,7 +26,7 @@ classdef CreateRobot < handle
         cameraDisplaceY = 0.0;  % Position of camera along robot's y-axis
         frictionKin= 0.35;    %  Coefficient of kinetic friction of robot and wall
         angRangeRSDepth = 54*pi/180   % Ang range for FOV of real sense depth sensor (rad)
-        rangeRSDepth = 30       % Max depth of real sense (m)
+        rangeRSDepth = 10       % Max depth of real sense (m)
         rangeMinRSDepth = 0.175 % Min depth of real sense (m)
         rsdepth_n_pts = 9;      % Number of depth points to sample
     end
@@ -3804,11 +3804,11 @@ classdef CreateRobot < handle
         % camera, and rotation about its center.
         %
         %   Camera coordinate frame is defined as:
-        %       x - axis points out of the camera (depth)
+        %       x - axis points out of camera (depth)
         %       y - axis points left
         %       z - axis points up
         %
-        %   Each row of the array is [dt id z x rot]
+        %   Each row of the array is [dt id x y rot]
         %   
         %   dt = The delay from when the tag was requested
         %   id = The id number of the AprilTag
@@ -3836,9 +3836,9 @@ classdef CreateRobot < handle
                     % Pause for communication delay
                     pause(obj.comDelay)
 
-                    Y = dist.*sin(angle);      
+                    Y = dist.*sin(angle);       % y-axis left
                     Z = zeros(numel(angle),1);  % Assume tags are in same plane as the camera
-                    X = +dist.*cos(angle);
+                    X = +dist.*cos(angle);      % x-axis forward
                     ROT = Z;                    % Assume tags are oriented upright 
                     
                     % Add the translator function call to output data
