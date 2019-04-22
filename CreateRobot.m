@@ -1038,7 +1038,7 @@ classdef CreateRobot < handle
             num_points = obj.rsdepth_n_pts;
             
             % Calculate position of sensor (same for all angles)
-            x_sensor= obj.posAbs(1)+obj.*cos(obj.thAbs);
+            x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs);
             y_sensor= obj.posAbs(2)+obj.cameraDisplaceX*sin(obj.thAbs);
             
             % Get noise parameters
