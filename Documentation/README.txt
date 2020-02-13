@@ -32,4 +32,4 @@ ChangeLog:
 Bugfix - Changed ReadSonar to actually read all sonar when given the second 
          input argument, instead of just reading the right sonar.
          
-PLease Note: Beacon ids can only be numbers
+Please Note: Beacon ids can only be numbers
