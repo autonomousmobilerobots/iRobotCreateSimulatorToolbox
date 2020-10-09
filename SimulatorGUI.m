@@ -568,15 +568,15 @@ fprintf('\tAngle relative to horizontal: %.3f rad\n\n',th)
 [angCameraBeacon distCameraBeacon colorCam ID]= genCamera(obj);
 % Also see ReadBeacon function in CreateRobot.m for details on camera.
 
-X = -distCameraBeacon.*sin(angCameraBeacon);    % Minus, because camera x-axis is to the right
-Z = +distCameraBeacon.*cos(angCameraBeacon);    % Camera's positive z-axis points forward (depth)
+X = distCameraBeacon.*cos(angCameraBeacon);    % Camera x-axis points forward (depth)
+Y = distCameraBeacon.*sin(angCameraBeacon);    % Camera's positive y-axis points left
 fprintf('Camera Data:\n')
 for i= 1:length(angCameraBeacon)
     fprintf('Beacon at: theta = %.0f deg, R = %.3f m, with color [%.2f %.2f %.2f] \n',...
         rad2deg(angCameraBeacon(i)),distCameraBeacon(i),colorCam(i,1),colorCam(i,2),...
         colorCam(i,3))
     fprintf('           X = %.2f m, Y = %.2f m, Z = %.2f m, rot = %.0f deg, with tag number %.0f \n',...
-        X(i),0,Z(i),0,ID(i))
+        X(i),Y(i),0,0,ID(i))
 end
 fprintf('\n')
 

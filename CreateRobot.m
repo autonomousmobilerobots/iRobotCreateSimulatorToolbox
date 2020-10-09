@@ -1586,11 +1586,26 @@ classdef CreateRobot < handle
                 motionRad = v/w;
                 %get relative motion
                 l_chord= motionRad*2*sin(dth/2);
-                y_rel= -dir*l_chord^2/2/motionRad;
+                
+                % Ji's version1
+%                 y_rel_global = l_chord*sin(dth/2+th);
+%                 x_rel_global = l_chord*cos(dth/2+th);
+%                 pos_new= [x ; y]+[x_rel_global ; y_rel_global];
+             
+                % Ji's version2
+                y_rel= l_chord^2/2/motionRad;
                 x_rel= sign_v*sqrt(l_chord^2-y_rel^2);
                 %translate into global chords 
                 R= [cos(th) -sin(th) ; sin(th) cos(th)];
                 pos_new= [x ; y]+R*[x_rel ; y_rel];
+                
+%                 y_rel= -dir*l_chord^2/2/motionRad;
+%                 x_rel= sign_v*sqrt(l_chord^2-y_rel^2);
+%                 %translate into global chords 
+%                 R= [cos(th) -sin(th) ; sin(th) cos(th)];
+%                 pos_new= [x ; y]+R*[x_rel ; y_rel];
+                
+                
                 x_new= pos_new(1);
                 y_new= pos_new(2);
                 vx= v*cos(th_new);

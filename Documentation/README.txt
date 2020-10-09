@@ -31,5 +31,3 @@ past the beta testing stage and is ready for mass use.
 ChangeLog:
 Bugfix - Changed ReadSonar to actually read all sonar when given the second 
          input argument, instead of just reading the right sonar.
-         
-Please Note: Beacon ids can only be numbers

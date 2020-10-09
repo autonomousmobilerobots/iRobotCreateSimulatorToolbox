@@ -1,0 +1,3 @@
+In the previous version of the simulator, there was a tiny mistake in odometry model which caused a constant angle offset with respect to actual robot motion. Now it has been fixed (in CreateRobot.m) - future students should use the simulator in this folder.
+
+-Ji
