@@ -309,7 +309,7 @@ classdef CreateRobot < handle
                 wheelLeft= FwdVel-AngVel*obj.wheelbase/2;
                 if abs(wheelRight) > 0.5 || abs(wheelLeft) > 0.5
                     wheelRight= min(max(wheelRight,-0.5),0.5);
-                    wheelLeft= min(max(wheelRight,-0.5),0.5);
+                    wheelLeft= min(max(wheelLeft,-0.5),0.5); %GS
                     disp(['Warning: desired velocity combination '...
                         'exceeds limits'])
                     FwdVel= (wheelRight+wheelLeft)/2;

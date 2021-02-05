@@ -538,10 +538,10 @@ distLidar= genLidar(obj);
 angleData= linspace(pi/2-angRLid/2,pi/2+angRLid/2,numPtsLid);
 figure
 hold on
-polar(linspace(0,2*pi,11),rad*ones(1,11),'b-')
-polar([0 pi/2],[0 1.5*rad],'b-')
-polar([angleData(1) 0 angleData(end)],[distLidar(1) 0 distLidar(end)],'k-')
-polar(angleData,distLidar,'k.')
+polarplot(linspace(0,2*pi,11),rad*ones(1,11),'b-')
+polarplot([0 pi/2],[0 1.5*rad],'b-')
+polarplot([angleData(1) 0 angleData(end)],[distLidar(1) 0 distLidar(end)],'k-')
+polarplot(angleData,distLidar,'k.')
 axis([-10 10 -10 10])
 title('LIDAR Data')
 xlabel('Distance (m)')
@@ -595,19 +595,23 @@ function push_fwd_Callback(hObject, eventdata, handles)
 % hObject    handle to push_fwd (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+push_fwd(hObject, eventdata, handles)
 
+
+function push_fwd(hObject, eventdata, handles)
 % Increase linear speed in robot object
 obj= get(handles.text_title,'UserData');
 velChange= [0.1 0];
 manualKeyboard(obj,velChange)
-
 
 % --- Executes on button press in push_back.
 function push_back_Callback(hObject, eventdata, handles)
 % hObject    handle to push_back (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+push_back(hObject, eventdata, handles)
 
+function push_back(hObject, eventdata, handles)
 % Decrease linear speed in robot object
 obj= get(handles.text_title,'UserData');
 velChange= [-0.1 0];
@@ -619,7 +623,9 @@ function push_left_Callback(hObject, eventdata, handles)
 % hObject    handle to push_left (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+push_left(hObject, eventdata, handles)
 
+function push_left(hObject, eventdata, handles)
 % Increase angular speed in robot object
 obj= get(handles.text_title,'UserData');
 velChange= [0 0.5];
@@ -631,7 +637,9 @@ function push_right_Callback(hObject, eventdata, handles)
 % hObject    handle to push_right (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+push_right(hObject, eventdata, handles)
 
+function push_right(hObject, eventdata, handles)
 % Decrease angular speed in robot object
 obj= get(handles.text_title,'UserData');
 velChange= [0 -0.5];
@@ -643,7 +651,9 @@ function push_stop_Callback(hObject, eventdata, handles)
 % hObject    handle to push_stop (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+push_stop(hObject, eventdata, handles)
 
+function push_stop(hObject, eventdata, handles)
 % Zero all velocity in robot object
 obj= get(handles.text_title,'UserData');
 velChange= [NaN NaN];
@@ -664,23 +674,23 @@ keydown= eventdata.Key;  % Assume only one key pressed at a time
 if any(strcmp(keydown,{'uparrow' 'w'})) && ...
         strcmp(get(handles.push_fwd,'Enable'),'on')
     hObject_new= handles.push_fwd;
-    push_fwd_Callback(hObject_new,[],handles)
+    push_fwd(hObject_new,[],handles)
 elseif any(strcmp(keydown,{'downarrow' 's'})) && ...
         strcmp(get(handles.push_back,'Enable'),'on')
     hObject_new= handles.push_back;
-    push_back_Callback(hObject_new,[],handles)
+    push_back(hObject_new,[],handles)
 elseif any(strcmp(keydown,{'leftarrow' 'a'})) && ...
         strcmp(get(handles.push_left,'Enable'),'on')
     hObject_new= handles.push_left;
-    push_left_Callback(hObject_new,[],handles)
+    push_left(hObject_new,[],handles)
 elseif any(strcmp(keydown,{'rightarrow' 'd'})) && ...
         strcmp(get(handles.push_right,'Enable'),'on')
     hObject_new= handles.push_right;
-    push_right_Callback(hObject_new,[],handles)
+    push_right(hObject_new,[],handles)
 elseif any(strcmp(keydown,{'space' 'return' 'escape'})) && ...
         strcmp(get(handles.push_stop,'Enable'),'on')
     hObject_new= handles.push_stop;
-    push_stop_Callback(hObject_new,[],handles)
+    push_stop(hObject_new,[],handles)
 end
 
 
@@ -738,7 +748,7 @@ if fileName
         % Run the Stop button callback to save data and re-enable manual
         % This will only run if Stop is not pushed during autonomous
         hObject_new= handles.push_auto_stop;
-        push_auto_stop_Callback(hObject_new,[],handles)
+        push_auto_stop(hObject_new,[],handles)
     catch me                    % Catch error and information
         if strcmp(me.identifier,'SIMULATOR:AutonomousDisabled')
             manualKeyboard(obj,[NaN NaN])   % Stop robot movement
@@ -755,7 +765,9 @@ function push_auto_stop_Callback(hObject, eventdata, handles)
 % hObject    handle to push_auto_stop (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+push_auto_stop(hObject, eventdata, handles)
 
+function push_auto_stop(hObject, eventdata, handles)
 % Get robot object
 obj= get(handles.text_title,'UserData');
 
