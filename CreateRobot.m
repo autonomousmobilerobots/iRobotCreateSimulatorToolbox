@@ -1674,7 +1674,7 @@ classdef CreateRobot < handle
             
             % Get normal vector from wall to robot
             nV= [x-collPts(1) y-collPts(2)]/...
-                sqrt((x-collPts(1))^2+(y-collPts(2))^2);
+                (sqrt((x-collPts(1))^2+(y-collPts(2))^2+1e-12)); %GUY
             
             % Put intended velocity into tangential and normal directions
             v_t_int= dot(v_int,tV);
