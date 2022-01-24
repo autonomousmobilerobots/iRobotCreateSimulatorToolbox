@@ -22,8 +22,8 @@ classdef CreateRobot < handle
         numPtsLidar= 681;       % Number of points in LIDAR sensing range
         rangeCamera = 6;        % Linear range of the camera for blob detection
         angRangeCamera = pi*60/180; % Angular range of camera (each side)
-        cameraDisplaceX = 0.13;  % Position of camera along robot's x-axis 
-        cameraDisplaceY = 0.0;  % Position of camera along robot's y-axis
+        cameraDisplaceX = 0.0;  % Position of rsdepth camera along robot's x-axis 
+        cameraDisplaceY = 0.08;  % Position of rsdepth camera along robot's y-axis
         frictionKin= 0.35;    %  Coefficient of kinetic friction of robot and wall
         angRangeRSDepth = 54*pi/180   % Ang range for FOV of real sense depth sensor (rad)
         rangeRSDepth = 10       % Max depth of real sense (m)
@@ -528,8 +528,10 @@ classdef CreateRobot < handle
             
             % RealSenseDepth sensor
             if get(handlesGUI.chkbx_rsdepth,'Value')
-                x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs);
-                y_sensor= obj.posAbs(2)+obj.cameraDisplaceX*sin(obj.thAbs);
+                x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs) - ...
+                    obj.cameraDisplaceY*sin(obj.thAbs);
+                y_sensor= obj.posAbs(2)+obj.cameraDisplaceX*sin(obj.thAbs) + ...
+                    obj.cameraDisplaceY*cos(obj.thAbs);
                 
                 iStart = 17; % idx to start counting in the handles
                 
@@ -1032,14 +1034,16 @@ classdef CreateRobot < handle
         %   and +angRangeRSDepth/2. The first element is the time the
         %   measurements were taken
         %
-        % Note: camera is at (+.13 m) as specified in obj.cameraDisplace
+        % Note: camera is at (0, 0.08 m) as specified in obj.cameraDisplace
         
             % Number of points to sample
             num_points = obj.rsdepth_n_pts;
             
             % Calculate position of sensor (same for all angles)
-            x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs);
-            y_sensor= obj.posAbs(2)+obj.cameraDisplaceX*sin(obj.thAbs);
+            x_sensor= obj.posAbs(1)+obj.cameraDisplaceX*cos(obj.thAbs) - ...
+                    obj.cameraDisplaceY*sin(obj.thAbs);
+            y_sensor= obj.posAbs(2)+obj.cameraDisplaceX*sin(obj.thAbs) + ...
+                    obj.cameraDisplaceY*cos(obj.thAbs);
             
             % Get noise parameters
             if isfield(obj.noise,'rsdepth')
@@ -1153,8 +1157,8 @@ classdef CreateRobot < handle
         % [ang dist color id] = genCamera(obj)
         % Generates the output from the blob detection on the camera,
         % detects only beacons
-        % Camera is located at 'cameraDisplace' distance (+0.13m) 
-        % along the robot's x-axis. Same as lab setup.
+        % Camera is located at 'cameraDisplace' distance (0, 0.08m) 
+        % Same as lab setup.
         %
         % Input:
         % obj - Instance of class CreateRobot
@@ -1173,8 +1177,10 @@ classdef CreateRobot < handle
             th_r= obj.thAbs;
             
             % Get camera position and orientation
-            x_c = x_r + obj.cameraDisplaceX*cos(th_r);
-            y_c = y_r + obj.cameraDisplaceX*sin(th_r);
+            x_c= x_r+obj.cameraDisplaceX*cos(th_r) - ...
+                    obj.cameraDisplaceY*sin(th_r);
+            y_c= y_r+obj.cameraDisplaceX*sin(th_r) + ...
+                    obj.cameraDisplaceY*cos(th_r);
             th_c = th_r;
             
             % Check each beacon against camera ranges
@@ -1668,7 +1674,7 @@ classdef CreateRobot < handle
             
             % Get normal vector from wall to robot
             nV= [x-collPts(1) y-collPts(2)]/...
-                sqrt((x-collPts(1))^2+(y-collPts(2))^2);
+                (sqrt((x-collPts(1))^2+(y-collPts(2))^2+1e-12)); %GUY
             
             % Put intended velocity into tangential and normal directions
             v_t_int= dot(v_int,tV);

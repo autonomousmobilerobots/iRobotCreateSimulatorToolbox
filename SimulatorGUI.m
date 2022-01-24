@@ -538,10 +538,10 @@ distLidar= genLidar(obj);
 angleData= linspace(pi/2-angRLid/2,pi/2+angRLid/2,numPtsLid);
 figure
 hold on
-polarplot(linspace(0,2*pi,11),rad*ones(1,11),'b-')
-polarplot([0 pi/2],[0 1.5*rad],'b-')
-polarplot([angleData(1) 0 angleData(end)],[distLidar(1) 0 distLidar(end)],'k-')
-polarplot(angleData,distLidar,'k.')
+polar(linspace(0,2*pi,11),rad*ones(1,11),'b-')
+polar([0 pi/2],[0 1.5*rad],'b-')
+polar([angleData(1) 0 angleData(end)],[distLidar(1) 0 distLidar(end)],'k-')
+polar(angleData,distLidar,'k.')
 axis([-10 10 -10 10])
 title('LIDAR Data')
 xlabel('Distance (m)')
