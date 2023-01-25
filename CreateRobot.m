@@ -2879,6 +2879,17 @@ classdef CreateRobot < handle
             end
         end
         
+        function BeepCreate(obj)
+        % Wrapper for BeepRoomba.
+        % Added in 2023 to allow student to pass the robot struct instead of the create port.
+        % This does not matter for the simulator, the two functions are identical.
+        % 
+        
+        BeepRoomba(obj)
+        
+        end
+        
+        
         function SetLEDsRoomba(obj,LED,pColor,pIntensity)
         % SetLEDsRoomba(obj,LED,pColor,pIntensity)
         % Control the lighting of the LEDs on the robot
@@ -3333,6 +3344,22 @@ classdef CreateRobot < handle
                 end
             end
         end
+  
+        function TravelDistCreate(obj, speed, distance)
+        % Wrapper for travelDist. 
+        % Added in 2023 to allow student to pass the robot struct instead of the create port.
+        % This does not matter for the simulator, the two functions are identical.
+        % 
+        % Robot is the robot struct created by CretePiInit
+        % Speed should be between 0.025 and 0.5 m/s
+        % Distance in meters
+        %
+        % See travelDist for more details
+        
+        travelDist(obj,speed,distance)
+        
+        end
+        
         
         function turnAngle(obj,speed,angle)
         % turnAngle(obj,speed,angle)
@@ -3438,6 +3465,22 @@ classdef CreateRobot < handle
             end
         end
         
+        function TurnCreate(obj,speed,angle)
+        % Wrapper for turnAngle.
+        % Added in 2023 to allow student to pass the robot struct instead of the create port.
+        % This does not matter for the simulator, the two functions are identical.
+        % 
+        % Robot is the robot struct created by CretePiInit
+        % Speed should be between 0 and 0.2
+        % Angle should be between +/- 360 degrees
+        %
+        % See turnAngle for more details
+        
+        turnAngle(obj,speed,angle)
+        
+        end
+        
+
         function state= VirtualWallSensorCreate(obj)
         % state = VirtualWallSensorCreate(obj)
         % Reads the state of the virtual wall sensor
